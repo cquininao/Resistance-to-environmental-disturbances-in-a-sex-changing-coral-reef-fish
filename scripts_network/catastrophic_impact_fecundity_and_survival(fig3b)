@@ -1,6 +1,6 @@
 %% nonlinear markov chain
 %% the impact of catastrophic disturbances
-%% figure 3b: impact only in fecundity and juvenile survival
+%% figure 3b: impact in fecundity and juvenile survival
 
 M = 1000;
 T = 150;
