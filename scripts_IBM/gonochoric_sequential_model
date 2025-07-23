@@ -1,0 +1,199 @@
+%% IBM Model
+%% to compute the empirical probability of extinction
+%% take different values of the number of anemones to construct the plot 5
+
+% for reproducibility
+rng(1)
+% Survival probability
+s = struct('J',0.28,'NB1',0.75,'NB2',0.51,'M1',0.75,'M2',0.51,'F1',0.37,'F2',0.59);
+% s = struct('J',1,'NB1',1,'NB2',1,'M1',1,'M2',1,'F1',1,'F2',1);
+s0 = 0.0005; % estimation of larva survival
+% maturing probability
+gamma1 = 0.56;
+gamma2 = 0.40;
+gamma = struct('NB1',gamma1,'M1',gamma1,'M2',gamma2,'F1',gamma2);
+% fecundity
+f1 = 30000;
+f2 = 42500;
+f = struct('F1',f1,'F2',f2);
+% density dependant function
+beta1 = 0.001;
+beta0 = 0.01;
+beta = struct('J',beta0,'NB1',beta0,'NB2',beta0,'M1',beta0,'M2',beta0);
+
+% Time parameters
+T = 50;
+dt = 1;
+t0 = 1;
+t = t0:dt:T;
+ntimes = length(t);
+
+% Variables and setting of the system
+N_anemones = 2;
+capacity = 10;
+
+M = 1000;
+SUR = zeros(M,ntimes);
+
+for iter = 1:M
+    X = zeros(1,6);
+    Y = zeros(N_anemones,6);
+
+    for i = 1:N_anemones
+        X(6) = randi([0,2]); %female
+        X(5) = randi([0,2]); %male
+        X(4) = randi([0,capacity-(X(5)>0)-(X(6)>0)]); %NB1
+        X(3) = randi([0,capacity-X(4)-(X(5)>0)-(X(6)>0)]); %NB2
+        X(2) = randi([0,capacity-X(3)-X(4)-(X(5)>0)-(X(6)>0)]); %JM
+        X(1) = randi([0,capacity-X(2)-X(3)-X(4)-(X(5)>0)-(X(6)>0)]); %JF
+        Y(i,:) = X;
+    end
+    for n = 2:T
+        for i = 1:N_anemones
+       
+            Xold = Y(i,:);
+            X = zeros(1,6);
+
+            % Females
+            saux = 0;
+            faux = 0;
+            gamaux = 0;
+            aleaG = rand;
+            aleaS = rand;
+            if Xold(6) == 1 % breeding female large
+                saux = aleaS<s.F1;
+                faux = f.F1 * (Xold(5)>0); % solo si hay male
+                gamaux = aleaG<gamma.F1;
+            elseif Xold(6) == 2 % breeding female very large
+                saux = aleaS<s.F2;
+                faux = f.F2 * (Xold(5)>0); % solo si hay male
+                gamaux = 0;
+            end
+            % saux = sobrevive? gamaux = crece?
+            X(6) = saux*((1+Xold(6))*gamaux+Xold(6)*(1-gamaux));
+            eggs = poissrnd(faux);
+            eggs = binornd(eggs,s0);
+            
+            % Juvenile female
+            lambdaJ = 1/(1+beta1*Xold(2));
+            for j = 1:Xold(2)
+                vphi = (X(6)==0);
+                % vphi = rand<1/(1+beta.J*(X(6)>0));
+                survive = rand<s.J;
+                if vphi && survive && (rand<lambdaJ)
+                    X(6) = 1;
+                end
+            end
+
+            % Male
+            aleaG = rand;
+            aleaS = rand;
+            if Xold(5) == 1 % breeding male small
+                grow = aleaG<gamma.M1;
+                survive = aleaS<s.M1;
+                if survive && grow
+                    X(5) = 2;
+                elseif survive && ~grow
+                    X(5) = 1;
+                end
+            elseif Xold(5) == 2 % breeding male large
+                survive = aleaS<s.M2;
+                if survive
+                    X(5) = 2;
+                end
+            end
+
+            % NB2
+            auxNB = 0;
+            for j = 1:Xold(4)
+                survive = rand<s.NB2;
+                vphi = X(5) == 0;
+                % vphi = rand<1/(1+beta.NB2*(X(5)>0));
+                if vphi && survive % no male
+                    X(5) = 2;
+                    vphi = 0;
+                elseif ~vphi && survive
+                    auxNB = auxNB+1;
+                end
+            end
+            X(4) = auxNB;
+            
+            % NB1
+            auxNB1 = 0;
+            auxNB2 = 0;
+            for j = 1:Xold(3)
+                survive = rand<s.NB1;
+                grow = rand<gamma.NB1;
+                vphi = X(5) == 0;
+                % vphi = rand<1/(1+beta.NB1*(X(5)>0));
+                if vphi && survive && grow % no male
+                    X(5) = 2;
+                    vphi = 0;
+                elseif vphi && survive && ~grow % no male
+                    X(5) = 1;
+                    vphi = 0;
+                elseif ~vphi && survive && grow
+                    auxNB2 = auxNB2+1;
+                elseif ~vphi && survive && ~grow
+                    auxNB1 = auxNB1+1;
+                end
+            end
+            X(4) = X(4)+auxNB2;
+            X(3) = auxNB1;
+
+             % Juvenile
+            auxNB1  = 0;
+            lambdaJ = 1/(1+beta1*Xold(1));
+            for j = 1:Xold(1)
+                survive = rand<s.J;
+                % vphi = X(3) == 0;
+                vphi = rand<1/(1+beta.J*(X(3)>0));
+                if vphi && survive
+                    X(3) = 1;
+                    vphi = 0;
+                elseif ~vphi && survive && (rand<lambdaJ)
+                    auxNB1 = auxNB1+1;
+                end
+            end
+            X(3) = X(3)+auxNB1;
+
+            X(1) = ceil(eggs/2);
+            X(2) = floor(eggs/2);
+            Y(i,:) = X;
+        end
+
+        eggsM = Y(:,1);
+        eggsF = Y(:,2);
+        Y(:,1:2) = zeros(N_anemones,2);
+
+        for i = 1:N_anemones
+            destination = 1:N_anemones;
+            destination = destination(destination~=i);
+            for j = 1:eggsM(i)
+                indice = randsample(destination,1);
+                Y(indice,1) = Y(indice,1)+1;
+            end
+            for j = 1:eggsF(i)
+                indice = randsample(destination,1);
+                Y(indice,2) = Y(indice,2)+1;
+            end
+        end
+
+        for i = 1:N_anemones
+            totalPop = sum(Y(i,1:4))+(Y(i,5)>0)+(Y(i,6)>0);
+            if totalPop > capacity
+                Y(i,1) = floor((capacity-sum(Y(i,3:4))-(Y(i,5)>0)-(Y(i,6)>0))/2);
+                Y(i,2) = ceil((capacity-sum(Y(i,3:4))-(Y(i,5)>0)-(Y(i,6)>0))/2);
+            end
+        end
+        
+        SUR(iter,n) = sum(sum(Y));
+    end
+    if mod(iter,1000)==0
+        disp(iter)
+    end
+end
+disp(nnz(SUR(:,end))/M)
+
+% OutPut when simulated for n_anemones from 2 to 10
+% ProbGon = 1-[0.014 0.096 0.300 0.492 0.675 0.787 0.861 0.923 0.940];
