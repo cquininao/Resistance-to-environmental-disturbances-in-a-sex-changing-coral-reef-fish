@@ -1,0 +1,9 @@
+function y = Phi(x,beta,AM)
+    N = AM*x';
+    y = struct('J',0,'NB1',0,'NB2',0,'M1',0,'M2',0);
+    y.J = 1/(1+beta.J.*N(1));
+    y.NB1 = 1/(1+beta.NB1.*N(2));
+    y.NB2 = 1/(1+beta.NB2.*N(3));
+    y.M1 = 1/(1+beta.M1.*N(4));
+    y.M2 = 1/(1+beta.M2.*N(5));
+end
