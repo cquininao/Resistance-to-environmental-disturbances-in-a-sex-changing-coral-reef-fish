@@ -1,0 +1,30 @@
+function y = Adec(s,gamma,lambdaJ,vphi,f,s0)
+    
+    y = zeros(7,7);
+    
+    y(1,2) = s.J*lambdaJ*(1-vphi.J);
+    y(1,4) = s.J*lambdaJ*vphi.J;
+
+    y(2,2) = s.NB1*(1-gamma.NB1)*(1-vphi.NB1);
+    y(2,3) = s.NB1*gamma.NB1*(1-vphi.NB1);
+    y(2,4) = s.NB1*(1-gamma.NB1)*vphi.NB1;
+    y(2,5) = s.NB1*gamma.NB1*vphi.NB1;
+
+    y(3,3) = s.NB2*(1-vphi.NB2);
+    y(3,5) = s.NB2*vphi.NB2;
+
+    y(4,4) = s.M1*(1-gamma.M1)*(1-vphi.M1);
+    y(4,5) = s.M1*gamma.M1*(1-vphi.M1);
+    y(4,6) = s.M1*gamma.M1*vphi.M1;
+
+    y(5,5) = s.M2*(1-vphi.M2);
+    y(5,6) = s.M2*(1-gamma.M2)*vphi.M2;
+    y(5,7) = s.M2*gamma.M2*vphi.M2;
+
+    y(6,1) = s0*f.F1;
+    y(6,6) = s.F1*(1-gamma.F1);
+    y(6,7) = s.F1*gamma.F1;
+    
+    y(7,1) = s0*f.F2;
+    y(7,7) = s.F2;
+end
