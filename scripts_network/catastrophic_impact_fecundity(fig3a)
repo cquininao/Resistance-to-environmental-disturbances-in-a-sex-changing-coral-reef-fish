@@ -22,7 +22,6 @@ beta0 = 0.01;
 beta = struct('J',beta0,'NB1',beta0,'NB2',beta0,'M1',beta0,'M2',beta0);
 
 % Time parameters
-% T = 300;
 dt = 1;
 t0 = 1;
 t = t0:dt:T;
