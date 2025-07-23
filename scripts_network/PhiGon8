@@ -1,0 +1,8 @@
+function y = PhiGon8(x,beta,AM)
+    N = AM*x';
+    y = struct('JM',0,'JF',0,'NB1',0,'NB2',0,'M1',0,'M2',0);
+    y.JM = 1/(1+beta.J.*N(1));
+    y.JF = 1/(1+beta.J.*N(2));
+    y.NB1 = 1/(1+beta.NB1.*N(3));
+    y.NB2 = 1/(1+beta.NB2.*N(4));
+end
