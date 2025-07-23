@@ -1,0 +1,31 @@
+function y = AdecGon8(s,gamma,lambdaJM,lambdaJF,vphi,f,s0)
+    
+    y = zeros(8,8);
+    
+    y(1,3) = s.J*lambdaJM*(1-vphi.JM);
+    y(1,5) = s.J*lambdaJM*vphi.JM;
+
+    y(2,7) = s.J*lambdaJF.*gamma.NB1*vphi.JF;
+
+    y(3,3) = s.NB1*(1-gamma.NB1)*(1-vphi.NB1);
+    y(3,4) = s.NB1*gamma.NB1*(1-vphi.NB1);
+    y(3,5) = s.NB1*(1-gamma.NB1)*vphi.NB1;
+    y(3,6) = s.NB1*gamma.NB1*vphi.NB1;
+
+    y(4,4) = s.NB2*(1-vphi.NB2);
+    y(4,6) = s.NB2*vphi.NB2;
+
+    y(5,5) = s.M1*(1-gamma.M1);
+    y(5,6) = s.M1*gamma.M1;
+
+    y(6,6) = s.M2;
+
+    y(7,1) = s0*f.F1/2;
+    y(7,2) = s0*f.F1/2;
+    y(7,7) = s.F1*(1-gamma.F1);
+    y(7,8) = s.F1*gamma.F1;
+    
+    y(8,1) = s0*f.F2/2;
+    y(8,2) = s0*f.F2/2;
+    y(8,8) = s.F2;
+end
