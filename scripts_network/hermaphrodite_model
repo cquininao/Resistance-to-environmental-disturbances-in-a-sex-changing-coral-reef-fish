@@ -1,0 +1,201 @@
+%% nonlinear markov chain
+%% sensitivity and ellasticity analysis
+%% Linear hermaphrodite model
+
+% paratemer set
+% order of index
+% J: Juvenile
+% NB1: Non breader small
+% NB2: Non breader large
+% M1: Male small
+% M2: Male large
+% F1: Female large
+% F2: Female very large
+
+% Survival probability
+s = struct('J',0.28,'NB1',0.75,'NB2',0.51,'M1',0.75,'M2',0.51,'F1',0.37,'F2',0.59);
+s0 = 0.0005; % estimation of larva survival
+% maturing probability
+gamma1 = 0.56;
+gamma2 = 0.40;
+gamma = struct('NB1',gamma1,'M1',gamma1,'M2',gamma2,'F1',gamma2);
+% fecundity
+f1 = 30000;
+f2 = 42500;
+f = struct('F1',f1,'F2',f2);
+% density dependant function
+beta1 = 0.001;
+beta0 = 0.01;
+beta = struct('J',beta0,'NB1',beta0,'NB2',beta0,'M1',beta0,'M2',beta0);
+
+% Time parameters
+T = 50;
+dt = 1;
+t0 = 1;
+t = t0:dt:T;
+ntimes = length(t);
+X = zeros(ntimes,7);
+
+% Initial conditions
+rng(1) % seed for replicability
+X(1,:) = randi(100,1,7);
+% Directed graph
+AM = Acontrol(2,7);
+
+for n = 2:T
+    lambdaJ = 1/(1+beta1*X(n-1,1));
+    vphi = Phi(X(n-1,:),beta,AM);
+    CM = Adec(s,gamma,lambdaJ,vphi,f,s0);
+    X(n,:) = X(n-1,:)*CM;
+end
+Pop = sum(X(n,:));
+names = {'Juveniles','Non Breeder 1','Non Breeder 2','Male 1','Male 2','Female 1','Female 2'};
+total = sum(X(n,:));
+disp("==========================================")
+disp("Steady State")
+disp("==========================================")
+disp("From simulation")
+for i = 1:7
+    disp([names{i},' : ',num2str(X(end,i)),' (',num2str(round(X(end,i)/total*100,2)),'%)'])
+end
+
+Y = zeros(ntimes,7);
+for i = 1:length(X(:,1))
+    Y(i,:) = X(i,:)/sum(X(i,:));
+end
+% contourf(Y)
+% colorbar
+% clim([0 1])
+% shading interp
+% ylabel('Time (generations)')
+% Words = {'J'; 'NB1'; 'NB2'; 'M1'; 'M2'; 'F1'; 'F2'};
+% set(gca,'xtick',1:7,'xticklabel',Words)
+
+% Table 2 Computation
+[U,V,W] = eig(CM');
+[~,auxi] = max(abs(diag(V)));
+maxU = U(:,auxi)./sum(U(:,auxi));
+maxW = W(:,auxi)./sum(W(:,auxi));
+
+disp("==========================================")
+disp("From right eigenvector")
+for i = 1:7
+    disp([names{i},' : ',num2str(maxU(i)*100,'%4.2f'),'%'])
+end
+disp("==========================================")
+disp("Reproductive Value")
+disp("==========================================")
+disp("From left eigenvector ")
+for i = 1:7
+    disp([names{i},' : ',num2str(maxW(i)*100,'%4.2f'),'%'])
+end
+disp(['Total : ',num2str(sum(X(n,:)),'%4.2f')])
+
+
+% Sensitivity analysis
+SSE = zeros(10,1);
+EEE = zeros(10,1);
+se = 0.001;
+
+% Survival
+CMs = Adec(s,gamma,lambdaJ,vphi,f,s0*(1+se));
+eigS = eig(CMs');
+lambdaMax = real(eigS(1));
+SSE(1) = abs(lambdaMax-1)/(s0*se);
+EEE(1) = SSE(1)*s0;
+
+sS = s;
+sS.J = s.J*(1+se);
+CMs = Adec(sS,gamma,lambdaJ,vphi,f,s0);
+eigS = eig(CMs');
+[~,auxi] = max(eigS);
+lambdaMax = real(eigS(auxi));
+SSE(2) = abs(lambdaMax-1)/(s.J*se);
+EEE(2) = SSE(2)*s.J;
+
+sS = s;
+sS.NB1 = s.NB1*(1+se);
+CMs = Adec(sS,gamma,lambdaJ,vphi,f,s0);
+eigS = eig(CMs');
+[~,auxi] = max(eigS);
+lambdaMax = real(eigS(auxi));
+SSE(3) = abs(lambdaMax-1)/(s.NB1*se);
+EEE(3) = SSE(3)*s.NB1;
+
+sS = s;
+sS.NB2 = s.NB2*(1+se);
+CMs = Adec(sS,gamma,lambdaJ,vphi,f,s0);
+eigS = eig(CMs');
+[~,auxi] = max(eigS);
+lambdaMax = real(eigS(auxi));
+SSE(4) = abs(lambdaMax-1)/(s.NB2*se);
+EEE(4) = SSE(4)*s.NB2;
+
+sS = s;
+sS.M1 = s.M1*(1+se);
+CMs = Adec(sS,gamma,lambdaJ,vphi,f,s0);
+eigS = eig(CMs');
+[~,auxi] = max(eigS);
+lambdaMax = real(eigS(auxi));
+SSE(5) = abs(lambdaMax-1)/(s.M1*se);
+EEE(5) = SSE(5)*s.M1;
+
+sS = s;
+sS.M2 = s.M2*(1+se);
+CMs = Adec(sS,gamma,lambdaJ,vphi,f,s0);
+eigS = eig(CMs');
+[~,auxi] = max(eigS);
+lambdaMax = real(eigS(auxi));
+SSE(6) = abs(lambdaMax-1)/(s.M2*se);
+EEE(6) = SSE(6)*s.M2;
+
+sS = s;
+sS.F1 = s.F1*(1+se);
+CMs = Adec(sS,gamma,lambdaJ,vphi,f,s0);
+eigS = eig(CMs');
+[~,auxi] = max(eigS);
+lambdaMax = real(eigS(auxi));
+SSE(7) = abs(lambdaMax-1)/(s.F1*se);
+EEE(7) = SSE(7)*s.F1;
+
+sS = s;
+sS.F2 = s.F2*(1+se);
+CMs = Adec(sS,gamma,lambdaJ,vphi,f,s0);
+eigS = eig(CMs');
+[~,auxi] = max(eigS);
+lambdaMax = real(eigS(auxi));
+SSE(8) = abs(lambdaMax-1)/(s.F2*se);
+EEE(8) = SSE(8)*s.F2;
+
+fs = f;
+fs.F1 = f.F1*(1+se);
+CMs = Adec(s,gamma,lambdaJ,vphi,fs,s0);
+eigS = eig(CMs');
+[~,auxi] = max(eigS);
+lambdaMax = real(eigS(auxi));
+SSE(9) = abs(lambdaMax-1)/(f.F1*se);
+EEE(9) = SSE(9)*f.F1;
+
+fs = f;
+fs.F2 = f.F2*(1+se);
+CMs = Adec(s,gamma,lambdaJ,vphi,fs,s0);
+eigS = eig(CMs');
+[~,auxi] = max(eigS);
+lambdaMax = real(eigS(auxi));
+SSE(10) = abs(lambdaMax-1)/(f.F2*se);
+EEE(10) = SSE(10)*f.F2;
+
+new_names = {'Larvae','Juveniles','Non Breeder 1','Non Breeder 2','Male 1','Male 2','Female 1','Female 2'};
+
+disp("==========================================")
+disp("Sensitivity and Elasticity")
+disp("==========================================")
+disp("Survival")
+for i = 1:8
+    disp([new_names{i},' : ','Sensitivity=',num2str(SSE(i),'%4.2f'),', Elasticity=',num2str(EEE(i),'%4.2f')])
+end
+disp("==========================================")
+disp("Fecundity")
+for i = 9:10
+    disp([new_names{i-2},' : ','Sensitivity=',num2str(SSE(i),'%4.2f'),', Elasticity=',num2str(EEE(i),'%4.2f')])
+end
