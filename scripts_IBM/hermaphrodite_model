@@ -1,0 +1,126 @@
+%% IBM Model
+%% to compute the empirical probability of extinction
+%% take different values of the number of anemones to construct the plot 5
+
+% for reproducibility
+rng(1)
+
+% Survival probability
+s = struct('J',0.28,'NB1',0.75,'NB2',0.51,'M1',0.75,'M2',0.51,'F1',0.37,'F2',0.59);
+s0 = 0.0005; % estimation of larva survival
+% maturing probability
+gamma1 = 0.56;
+gamma2 = 0.40;
+gamma = struct('NB1',gamma1,'M1',gamma1,'M2',gamma2,'F1',gamma2);
+% fecundity
+f1 = 30000;
+f2 = 42500;
+f = struct('F1',f1,'F2',f2);
+% density dependant function
+beta1 = 0.001;
+beta0 = 0.01;
+beta = struct('J',beta0,'NB1',beta0,'NB2',beta0,'M1',beta0,'M2',beta0);
+
+% Time parameters
+T = 50;
+dt = 1;
+t0 = 1;
+t = t0:dt:T;
+ntimes = length(t);
+
+% Variables and setting of the system
+N_anemones = 10;
+capacity = 10;
+Y = zeros(N_anemones,7);
+X = zeros(1,7); % Juveniles - NonBreedersS - NonBreedersL - Male - Female
+
+M = 1000;
+SUR = zeros(M,ntimes);
+for iter = 1:M
+    X = zeros(1,7);
+    for i = 1:N_anemones
+        X(1,7) = randi(2)-1;
+        X(1,6) = randi(2-X(1,7))-1;
+        X(1,5) = randi(2)-1;
+        X(1,4) = randi(2-X(1,5))-1;
+        X(1,3) = randi(capacity-sum(X(1,4:end)))-1;
+        X(1,2) = randi(max(0,capacity-sum(X(1,3:end))))-1;
+        X(1,1) = randi(max(0,capacity-sum(X(1,2:end))))-1;
+        Y(i,:) = X(1,:);
+    end
+    for n = 2:T
+        for i = 1:N_anemones
+            flag = 0;
+            eggs = 0;
+            X = Y(i,:);
+            if X(1,7) == 1
+                X(1,7) = rand<s.F2;
+                eggs = poissrnd(f.F2);
+                eggs = binornd(eggs,s0)*((X(1,5)+X(1,4))>0);
+            elseif X(1,6) == 1
+                grow = rand<gamma.F1;
+                survive = rand<s.F1;
+                X(1,7) = grow*survive;
+                X(1,6) = (1-grow)*survive;
+                eggs = poissrnd(f.F2);
+                eggs = binornd(eggs,s0)*((X(1,5)+X(1,4))>0);
+            end
+            if X(1,5) == 1
+                grow = rand<gamma.M2;
+                survive = rand<s.M2;
+                vphi = sum(X(1,6:end))==0;
+                X(1,7) = survive*grow*vphi;
+                X(1,6) = survive*(1-grow)*vphi;
+                X(1,5) = survive*(1-vphi);
+            elseif X(1,4) == 1
+                grow = rand<gamma.M1;
+                flag = grow;
+                survive = rand<s.M1;
+                vphi = sum(X(1,6:end))==0;
+                X(1,6) = survive*grow*vphi;
+                X(1,5) = survive*(1-vphi);
+                X(1,4) = survive*(1-grow)*(1-vphi);
+            end
+            if X(1,3) > 0
+                vphi = (X(1,5)==0);
+                survive = binornd(X(1,3),s.NB2);
+                X(1,5) = (survive>0)*vphi;
+                X(1,3) = max(survive-1,0)*vphi+survive*(1-vphi);
+            end
+            if X(1,2) > 0
+                vphi = sum(X(1,4:5))==0;
+                survive = binornd(X(1,2),s.NB1);
+                grow = binornd(survive,gamma.NB1)*flag;
+                X(1,4) = ((survive-grow)*vphi)>0;
+                X(1,5) = (grow*vphi)>0;
+                X(1,3) = grow*(1-vphi);
+                X(1,2) = (survive-grow)*(1-vphi) + max(0,(survive-1))*vphi;
+            end
+            if X(1,1) > 0
+                vphi = sum(X(1,4:5))==0;
+                survive = binornd(X(1,1),s.J);
+                X(1,4) = (survive>0)*vphi;
+                X(1,2) = survive*(1-vphi)+max(survive-1,0)*vphi;
+            end
+            X(1,1) = eggs;
+            Y(i,:) = X;
+        end
+        eggs = Y(:,1);
+        for i = 1:N_anemones
+            eggsi = sum(eggs)-eggs(i);
+            Y(i,1) = eggsi/(N_anemones-1);
+            if sum(Y(i,:))>capacity
+                Y(i,1) = capacity-sum(Y(i,2:end));
+            end
+        end
+        SUR(iter,n) = sum(sum(Y));
+    end
+    if mod(iter,1000)==0
+        disp(iter)
+    end
+end
+disp(nnz(SUR(:,end))/M)
+
+% OutPut when simulated for n_anemones from 2 to 10
+% ProbSC = 1-[0.000 0.3870 0.852 0.930 0.949 0.970 0.987 0.992 0.991];
+
